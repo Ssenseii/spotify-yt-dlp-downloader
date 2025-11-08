@@ -158,7 +158,7 @@ spotify-ytdlp/
 
 ## ⚙️ Upgrade guide
 
-If the system fails to donwload your music too frequently, make sure to run this command
+If the system fails to download your music too frequently, make sure to run this command
 
   ```bash
   pip install --upgrade yt-dlp
