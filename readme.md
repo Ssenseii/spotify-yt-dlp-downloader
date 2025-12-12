@@ -139,18 +139,25 @@ spotify-ytdlp/
    cd spotify-ytdlp
    ```
 
-2. **Install dependencies**:
+2. **Create and activate virtual environment**:
 
    ```bash
-   pip install -r requirements.txt
+   python3 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. **Install dependencies**:
+
+   ```bash
+   python3 -m pip install -r requirements.txt
    ```
 
 > (if you use system check it'll say yt-dlp is not installed even if it is so don't worry about that until I fix that check).
 
-3. **Ensure `yt-dlp` is installed**:
+4. **Ensure `yt-dlp` is installed**:
 
    ```bash
-   pip install yt-dlp
+   python3 -m pip install yt-dlp
    ```
 
 
@@ -161,7 +168,7 @@ spotify-ytdlp/
 If the system fails to donwload your music too frequently, make sure to run this command
 
     ```bash
-    pip install --upgrade yt-dlp
+    python3 -m pip install --upgrade yt-dlp
     ```
 
 
@@ -238,7 +245,11 @@ Edit `config.json` to set your preferences:
 Run the program:
 
 ```bash
-python main.py
+# First activate the virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Then run the program
+python3 main.py
 ```
 
 You will see a menu with options for downloading, checking files, importing playlists, retrying failed downloads, and more.
@@ -262,7 +273,7 @@ Here’s the updated Dependencies section including `mutagen` and `schedule`:
 Install all:
 
 ```bash
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 ---

@@ -1,6 +1,21 @@
 # Potty Documentation
 
-Welcome to the Potty documentation! This folder contains detailed documentation for each module and folder in the codebase.
+Welcome to Potty documentation! This folder contains detailed documentation for each module and folder in codebase.
+
+## System Requirements
+
+### Required Dependencies
+- **Python 3.9+** - Primary runtime environment
+- **yt-dlp** - YouTube video/audio extraction tool (installed via pip)
+- **ffmpeg** - Audio processing and format conversion (system package)
+  - Ubuntu/Debian: `sudo apt install ffmpeg`
+  - macOS: `brew install ffmpeg`
+  - Windows: Download from https://ffmpeg.org/download.html
+
+### Optional Dependencies
+- **JavaScript Runtime** - Recommended for yt-dlp (Node.js, Deno, or QuickJS)
+  - Improves YouTube extraction reliability
+  - Install via: `npm install -g node` or follow yt-dlp documentation
 
 ## Documentation Structure
 

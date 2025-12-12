@@ -42,17 +42,19 @@ def _download_worker(artist, track, output_dir, audio_format):
         f"ytsearch1:{query}",
         "-x",
         "--audio-format", audio_format,
-        "-o", os.path.join(output_dir, f"{filename}.%(ext)s"),
-        "--quiet"
+        "-o", os.path.join(output_dir, f"{filename}.%(ext)s")
     ]
 
     try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        process.wait()
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate()
+        
         if process.returncode == 0:
             log_success(f"Downloaded: {query}")
         else:
             log_error(f"Failed: {query}")
+            if stderr:
+                log_error(f"Error details: {stderr.strip()}")
     except Exception as e:
         log_error(f"Error downloading {query}: {e}")
 
