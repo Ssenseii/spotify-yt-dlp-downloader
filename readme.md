@@ -39,13 +39,13 @@ Features interactive menus, system checks, download management, metadata embeddi
 
 ## 🛠 Prerequisite for Spotify Export downloads: **Export Your Spotify Data**
 
-Before using Potty for spotify downloads, you need to request your personal Spotify data from Spotify’s Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
+Before using Potty for spotify downloads, you need to request your personal Spotify data from Spotify's Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
 
 This YourLibrary.json file contains your saved tracks, albums, and playlists metadata, which Potty can use to generate the track list and manage downloads.
 
 How to get your Spotify data:
 
-    Go to Spotify’s Privacy Request page.
+    Go to Spotify's Privacy Request page.
 
     Request your personal data export.
 
@@ -75,17 +75,17 @@ spotify-ytdlp/
 │
 ├── history/
 │   └── prototype.py       # First version of this entire app 
-│
+
 ├── data/
 │   ├── exportify              # Directory where you should place your exportify csv files
 │   ├── tracks.json            # Track list (with artist, album, track, uri)
 │   ├── failed_downloads.json  # Tracks that failed to download
 │   └── download_history.json  # Downloaded tracks history
-│
+
 ├── export/
 │   ├── potyy_export_(MDY).json  # export of tracks in music folder
 │   └── playlist_tracklist.json  # playlist in tracks format
-│
+
 ├── downloader/
 │   ├── base_downloader.py                # Download logic (single, batch)
 │   ├── playlist_download.py              # Download playlists
@@ -93,7 +93,7 @@ spotify-ytdlp/
 │   ├── retry_manager.py                  # Retry failed downloads
 │   ├── youtube_link_downloader.py        # Download Directly from youtube link
 │   └── __init__.py│
-│
+
 ├── menus/                     # Interactive menu modules
 │   ├── automation_menu.py     # Menu for automation section
 │   ├── downloads_menu.py      # Menu for downloads section
@@ -101,7 +101,7 @@ spotify-ytdlp/
 │   ├── management_menu.py     # Menu for management section
 │   ├── tools_menu.py          # Menu for tools section
 │   └── __init__.py
-│
+
 ├── tools/
 │   ├── choose_audio_format.py      # pick global format for download
 │   ├── compress_music.py           # compress songs to a certain format
@@ -111,20 +111,20 @@ spotify-ytdlp/
 │   ├── open_log.py                 # opens app.log
 │   ├── playlist_to_tracklist.py    # playlist turned into tracklist format
 │   └── __init__.py
-│
+
 ├── managers/
 │   ├── file_manager.py        # Duplicate detection, file organization
 │   ├── resume_manager.py      # Resume batch downloads
 │   ├── schedule_manager.py    # Scheduled downloads
 │   └── __init__.py
-│
+
 ├── utils/
 │   ├── logger.py              # Logging utilities
 │   ├── loaders.py             # Loading utilities
 │   ├── system.py              # System resource checks
 │   ├── track_checker.py       # Check downloaded files
 │   └── __init__.py
-│
+
 └── music/                 # Downloaded music files
 ```
 
@@ -160,6 +160,23 @@ spotify-ytdlp/
    python3 -m pip install yt-dlp
    ```
 
+---
+
+## 🚀 Quick Start with start.sh
+
+For an effortless setup and launch experience, use the provided `start.sh` script:
+
+```bash
+./start.sh
+```
+
+This script automatically handles:
+
+- **Virtual Environment Creation**: If `.venv` doesn't exist, it creates one for you
+- **Dependency Installation**: Automatically installs all required packages from `requirements.txt` when creating a new virtual environment
+- **Application Launch**: Activates the virtual environment and starts the application
+
+No manual setup required! The script will guide you through the process with clear status messages.
 
 ---
 
@@ -256,7 +273,7 @@ You will see a menu with options for downloading, checking files, importing play
 
 ---
 
-Here’s the updated Dependencies section including `mutagen` and `schedule`:
+Here's the updated Dependencies section including `mutagen` and `schedule`:
 
 ---
 
@@ -288,4 +305,4 @@ python3 -m pip install -r requirements.txt
 ## ⚠️ Disclaimer
 
 This tool is for **personal use only**.  
-Ensure you respect copyright laws and YouTube’s terms.
+Ensure you respect copyright laws and YouTube's terms.
