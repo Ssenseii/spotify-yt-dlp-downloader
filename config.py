@@ -60,9 +60,6 @@ CONFIG_SCHEMA = {
     "tracks_file": {"type": str, "required": True},
     "playlists_file": {"type": str, "required": True},
 
-    "primary_input_source": {"type": str, "required": False, "choices": ["csv", "json"]},
-    "primary_csv_file": {"type": str, "required": False},
-
     "output_dir": {"type": str, "required": True},
     "audio_format": {
         "type": str,
