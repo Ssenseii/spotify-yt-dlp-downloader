@@ -1,4 +1,4 @@
-# 🎶 Potty
+# 🎶 HARMONI
 
 A modular, Python-based command-line tool for downloading music from Spotify & Youtube using **yt-dlp**.  
 Features interactive menus, system checks, download management, metadata embedding, and robust logging.
@@ -45,9 +45,9 @@ Features interactive menus, system checks, download management, metadata embeddi
 
 ### Option 1: Official Spotify Data Export
 
-Before using Potty for spotify downloads, you can request your personal Spotify data from Spotify's Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
+Before using HARMONI for spotify downloads, you can request your personal Spotify data from Spotify's Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
 
-This YourLibrary.json file contains your saved tracks, albums, and playlists metadata, which Potty can use to generate the track list and manage downloads.
+This YourLibrary.json file contains your saved tracks, albums, and playlists metadata, which HARMONI can use to generate the track list and manage downloads.
 
 How to get your Spotify data:
 
@@ -59,7 +59,7 @@ How to get your Spotify data:
 
     Extract the ZIP and locate YourLibrary.json.
 
-    Use or convert this JSON file as the basis for your data/tracks.json to run Potty.
+    Use or convert this JSON file as the basis for your data/tracks.json to run HARMONI.
 
 ### Option 2: Exportify (Recommended Alternative)
 
@@ -77,7 +77,7 @@ How to use Exportify:
 
 Exportify downloads are immediately available and don't require the waiting period associated with official Spotify data exports.
 
-This step is essential to generate the input data Potty needs for downloading your favorite music.
+This step is essential to generate the input data HARMONI needs for downloading your favorite music.
 
 ---
 
@@ -204,7 +204,7 @@ No manual setup required! The script will guide you through the process with cle
 
 ## 🐳 Docker Deployment
 
-If you'd rather not install Python/ffmpeg locally, you can run Potty fully inside Docker. The provided Docker setup includes system dependencies like **ffmpeg** and runs the same interactive `questionary` menus.
+If you'd rather not install Python/ffmpeg locally, you can run HARMONI fully inside Docker. The provided Docker setup includes system dependencies like **ffmpeg** and runs the same interactive `questionary` menus.
 
 ### Prerequisites
 

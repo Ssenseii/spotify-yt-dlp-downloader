@@ -7,7 +7,7 @@ from constants import VALID_AUDIO_EXTENSIONS
 def library_export_json(config):
     """
     Scans the music folder (and all subfolders) for audio files
-    and exports the list as potty_export_<date>.json inside export/.
+    and exports the list as harmoni_export_<date>.json inside export/.
     """
     try:
         music_dir = config.get("output_dir", "music")
@@ -32,7 +32,7 @@ def library_export_json(config):
         os.makedirs(export_dir, exist_ok=True)
 
         date_str = datetime.now().strftime("%Y-%m-%d")
-        export_path = os.path.join(export_dir, f"potty_export_{date_str}.json")
+        export_path = os.path.join(export_dir, f"harmoni_export_{date_str}.json")
 
         with open(export_path, "w", encoding="utf-8") as f:
             json.dump({"music_files": music_files}, f, indent=2, ensure_ascii=False)

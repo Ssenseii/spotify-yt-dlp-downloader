@@ -170,7 +170,7 @@ This module provides standalone utility tools that enhance the application's fun
    - Collects all files with valid audio extensions
    - Stores only filenames (not full paths)
    - Creates `export/` directory if it doesn't exist
-   - Generates filename with current date: `potty_export_YYYY-MM-DD.json`
+   - Generates filename with current date: `harmoni_export_YYYY-MM-DD.json`
    - Creates JSON structure:
      ```json
      {
@@ -194,7 +194,7 @@ This module provides standalone utility tools that enhance the application's fun
 
 **Usage**: Called from `menus.tools_menu` to export library inventory.
 
-**Output Location**: `export/potty_export_YYYY-MM-DD.json`
+**Output Location**: `export/harmoni_export_YYYY-MM-DD.json`
 
 ---
 

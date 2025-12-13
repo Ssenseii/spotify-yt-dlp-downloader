@@ -24,7 +24,7 @@ This module provides the complete command-line interface using the `questionary`
 **How it works**:
 
 1. Uses `questionary.select` to create an interactive menu
-2. Displays welcome message: "🎵 Welcome to POTTY Spotify & Music Downloader"
+2. Displays welcome message: "🎵 Welcome to HARMONI Spotify & Music Downloader"
 3. Presents six options:
    - Downloads Menu
    - Management Menu

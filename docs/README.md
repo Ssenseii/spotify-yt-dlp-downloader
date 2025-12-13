@@ -1,6 +1,6 @@
-# Potty Documentation
+# HARMONI Documentation
 
-Welcome to Potty documentation! This folder contains detailed documentation for each module and folder in codebase.
+Welcome to HARMONI documentation! This folder contains detailed documentation for each module and folder in codebase.
 
 ## System Requirements
 

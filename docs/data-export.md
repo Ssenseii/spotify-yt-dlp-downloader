@@ -221,7 +221,7 @@ The `export/` folder contains generated output files:
 
 ## Export Folder Files
 
-### `potty_export_YYYY-MM-DD.json`
+### `harmoni_export_YYYY-MM-DD.json`
 
 **Purpose**: Exported inventory of all music files in the library.
 
@@ -249,7 +249,7 @@ The `export/` folder contains generated output files:
 - Created when user selects "Library export as JSON" from tools menu
 - Useful for backup, inventory, or migration purposes
 
-**Example**: `export/potty_export_2025-01-15.json`
+**Example**: `export/harmoni_export_2025-01-15.json`
 
 ---
 
