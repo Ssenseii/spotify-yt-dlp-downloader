@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  spotify-yt-dlp-downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spotify-yt-dlp-downloader
+
+    # This is an interactive CLI app (questionary menus), so keep STDIN + TTY attached.
+    stdin_open: true
+    tty: true
+
+    volumes:
+      - ./data:/app/data
+      - ./music:/app/music
+      - ./export:/app/export
+      - ./config.json:/app/config.json
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TERM=xterm-256color
+
+    # Avoid unexpected restarts when the user exits the CLI.
+    restart: "no"
+
+    # Healthchecks aren't very meaningful for an interactive CLI process,
+    # so none are defined here.

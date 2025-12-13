@@ -1,0 +1,60 @@
+# Version control
+.git/
+.gitignore
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# Python cache / temp
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Tests + coverage
+tests/
+test/
+coverage/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+*.py,cover
+
+# Documentation (keep README if you need it in image)
+docs/
+*.md
+!README.md
+!readme.md
+
+# Logs
+*.log
+app.log
+
+# Downloaded music + exports
+music/
+export/
+
+# Development files
+todo.md
+changelog.md
+
+# Docker-related files (kept out of build context per request)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# OS-specific
+.DS_Store
+Thumbs.db

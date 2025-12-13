@@ -154,44 +154,44 @@ This module provides foundational utilities that support all other modules:
 
 **How it works**:
 
-1. **`check_downloaded_files(output_dir, tracks)`**:
-   - Scans output directory for existing files
-   - Creates set of existing filenames for fast lookup
-   - For each track in input list:
-     - Constructs expected filename: `"{artist} - {track}.mp3"`
-     - Sanitizes filename (replaces "/" with "-")
-     - Checks if file exists in directory
-     - Categorizes as downloaded or pending
+1. **Canonical track identity**:
+
+   - Tracks are identified using a canonical key:
+     - `artist.casefold() + "|" + track.casefold()`
+
+2. **Directory scanning is extension-agnostic**:
+
+   - Existing files are discovered by scanning the target directory for any extension in `constants.VALID_AUDIO_EXTENSIONS`.
+   - Filenames are parsed using the pattern: `Artist - Track.ext`.
+
+3. **`check_downloaded_files(output_dir, tracks)`**:
+
+   - Scans `output_dir` (non-recursive) for existing audio files
+   - For each input track, checks whether its canonical key exists in the directory
    - Returns tuple: `(downloaded_count, pending_list)`
    - Logs summary of downloaded vs pending counts
 
-2. **`check_downloaded_playlists(output_dir, playlists)`**:
-   - Processes playlist structure from `playlists.json`
-   - For each playlist:
-     - Extracts track information from playlist items
-     - Checks if playlist folder exists
-     - Scans playlist folder for downloaded tracks
-     - Separates tracks into downloaded and pending lists
-     - Creates playlist dictionaries with track status
+4. **`check_downloaded_playlists(output_dir, playlists)`**:
+
+   - Normalizes playlist structures to flat `{artist, track}` lists
+   - Checks existence against each playlist's destination folder:
+     - `output_dir/<playlist_name>/`
    - Returns tuple: `(downloaded_playlists, pending_playlists)`
-   - Logs status for each playlist
 
 **Key Features**:
 - Efficient file existence checking
-- Playlist-aware checking (folder-based)
+- Playlist-folder-aware checking (destination folder based)
 - Handles missing playlist folders gracefully
-- Provides detailed status information
+- Works across multiple audio formats (not hardcoded to `.mp3`)
 
 **Dependencies**:
 - `os` - File system operations
+- `constants.VALID_AUDIO_EXTENSIONS` - Valid audio extensions
 - `utils.logger` - Logging functions
 
 **Usage**: 
-- Called from `menus.downloads_menu` before downloading to avoid duplicates
-- Used to determine which tracks need downloading
-- Helps provide user feedback on download status
-
-**Filename Format**: Assumes files are named `"{artist} - {track}.mp3"` (matches downloader format)
+- Called from `menus.downloads_menu` to avoid duplicates and show accurate counts
+- Used by the per-playlist song selection UI to auto-uncheck existing songs
 
 ---
 

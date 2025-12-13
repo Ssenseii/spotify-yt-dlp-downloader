@@ -1,6 +1,7 @@
 {
   "tracks_file": "data/tracks.json",
   "playlists_file": "data/playlists.json",
+
   "output_dir": "music",
   "audio_format": "mp3",
   "sleep_between": 5,
@@ -12,6 +13,8 @@
   "max_backups": 10,
   "profile": "light",
   "exportify_watch_folder": "data/exportify",
+
+  "sync_write_tracks_json": false,
   "auto_sync_enabled": false,
   "auto_sync_interval": 3600
 }

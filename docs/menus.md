@@ -64,7 +64,7 @@ This module provides the complete command-line interface using the `questionary`
 
 2. **Sequential Downloads**:
 
-   - Loads tracks from `tracks_file`
+   - Loads tracks from the configured primary source
    - Checks which tracks are already downloaded
    - Downloads pending tracks one by one using `download_track`
 
@@ -80,12 +80,15 @@ This module provides the complete command-line interface using the `questionary`
    - Uses "Unknown Artist" if artist not provided
    - Downloads immediately
 
-5. **Playlist Downloads**:
+5. **Playlist Downloads (Legacy playlists file)**:
 
    - Loads playlists from `playlists_file`
-   - Checks which playlists/tracks are already downloaded
-   - Offers to download all or let user pick specific playlists
-   - Uses checkbox selection for multiple playlists
+   - Lets the user download all pending playlists or pick specific playlists
+   - **NEW: Song selection step** (per selected playlist):
+     - Lists all songs in the playlist
+     - Provides checkbox selection with **Select All / Deselect All** actions
+     - Songs that already exist in the destination folder `music/<playlist>/` start unchecked
+     - User confirms and downloads only the selected songs
 
 6. **Exportify CSV Downloads**:
 
@@ -93,7 +96,11 @@ This module provides the complete command-line interface using the `questionary`
    - Parses CSV files into playlist format
    - Shows track counts per playlist
    - Allows multi-select of playlists
-   - Checks for already-downloaded tracks before downloading
+   - **NEW: Song selection step** (per selected playlist):
+     - Lists all songs in the playlist
+     - Provides checkbox selection with **Select All / Deselect All** actions
+     - Songs that already exist in the destination folder `music/<playlist>/` start unchecked
+     - User confirms and downloads only the selected songs
 
 7. **YouTube Link Downloads**:
    - Prompts for YouTube URL
@@ -113,13 +120,31 @@ This module provides the complete command-line interface using the `questionary`
 - `asyncio` - Async operations
 - `questionary` - Interactive menus
 - `utils.logger` - Logging
-- `utils.track_checker` - Check downloaded files
+- `utils.track_checker` - Existing file detection helpers
 - `utils.loaders` - Load tracks/playlists
 - `downloader.base_downloader` - Core download functions
 - `downloader.playlist_download` - Playlist downloads
 - `downloader.youtube_link_downloader` - YouTube downloads
 
 **Usage**: Called from `main.py` when user selects "Downloads Menu".
+
+---
+
+### `song_selection_menu.py`
+
+**Purpose**: Provides the per-playlist song selection UI used by playlist download workflows.
+
+**How it works**:
+
+- Shows a `questionary.checkbox` list of songs in the playlist.
+- Adds action rows at the top:
+  - **Select All**
+  - **Deselect All**
+- Determines which songs already exist by scanning the destination folder `music/<playlist>/`.
+  - Existing songs are shown with a `(exists)` suffix and start unchecked.
+- Returns the selected songs as a normalized list of `{ "artist": str, "track": str }` dicts.
+
+**Usage**: Called by `downloads_menu.py` after playlist selection and before downloading.
 
 ---
 
@@ -193,6 +218,7 @@ This module provides the complete command-line interface using the `questionary`
    - Continues downloading from where it left off
 
 3. **Schedule Download**:
+
    - Calls `schedule_download` from `managers.schedule_manager`
    - Prompts for time in HH:MM format (24-hour)
    - Sets up daily scheduled download job

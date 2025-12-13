@@ -3,12 +3,51 @@ import subprocess
 import time
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from utils import log_info, log_success, log_error
+from utils import log_info, log_success, log_error, log_warning
 from tqdm import tqdm
 
-def download_track(artist, track, output_dir, audio_format, sleep_between):
+
+def _get_base_filename(artist: str, track: str) -> str:
+    """Generate the base filename used by yt-dlp for consistent metadata embedding."""
     query = f"{artist} - {track}"
-    filename = query.replace("/", "-")
+    return query.replace("/", "-")
+
+
+def _embed_metadata_after_download(
+    audio_path: str,
+    track: dict,
+    config: dict,
+) -> bool:
+    """Embed metadata into downloaded audio file after successful download."""
+    try:
+        from downloader.metadata import embed_track_metadata
+        
+        # Check if metadata embedding is enabled
+        if not config.get("enable_metadata_embedding", True):
+            return True
+        
+        # Get metadata template and options
+        template = config.get("metadata_template", "basic")
+        enable_musicbrainz = config.get("enable_musicbrainz_lookup", True)
+        
+        # Embed metadata
+        return embed_track_metadata(
+            audio_path,
+            track,
+            template=template,
+            allow_musicbrainz=enable_musicbrainz,
+        )
+    except ImportError:
+        log_warning("Metadata embedding module not available, skipping metadata embedding")
+        return True
+    except Exception as e:
+        log_error(f"Metadata embedding failed for {audio_path}: {e}")
+        return False
+
+
+def download_track(artist, track, output_dir, audio_format, sleep_between, config=None):
+    query = f"{artist} - {track}"
+    filename = _get_base_filename(artist, track)
 
     log_info(f"Starting download: {query}")
     cmd = [
@@ -24,6 +63,22 @@ def download_track(artist, track, output_dir, audio_format, sleep_between):
         process.wait()
         if process.returncode == 0:
             log_success(f"Downloaded successfully: {query}")
+            
+            # Try to find the downloaded audio file and embed metadata
+            try:
+                from downloader.metadata import find_downloaded_audio_path
+                audio_path = find_downloaded_audio_path(output_dir, filename)
+                if audio_path:
+                    track_data = {"artist": artist, "track": track}
+                    metadata_success = _embed_metadata_after_download(audio_path, track_data, config or {})
+                    if metadata_success:
+                        log_info(f"Metadata embedded for {query}")
+                    else:
+                        log_warning(f"Metadata embedding failed for {query}")
+                else:
+                    log_warning(f"Could not find downloaded audio file for metadata embedding: {filename}")
+            except Exception as e:
+                log_warning(f"Metadata embedding step failed: {e}")
         else:
             log_error(f"Failed to download: {query}")
     except Exception as e:
@@ -33,26 +88,42 @@ def download_track(artist, track, output_dir, audio_format, sleep_between):
 
 
 # Worker function for a single track
-def _download_worker(artist, track, output_dir, audio_format):
+def _download_worker(artist, track, output_dir, audio_format, config=None):
     query = f"{artist} - {track}"
-    filename = query.replace("/", "-")
+    filename = _get_base_filename(artist, track)
 
     cmd = [
         "yt-dlp",
         f"ytsearch1:{query}",
         "-x",
         "--audio-format", audio_format,
-        "-o", os.path.join(output_dir, f"{filename}.%(ext)s"),
-        "--quiet"
+        "-o", os.path.join(output_dir, f"{filename}.%(ext)s")
     ]
 
     try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        process.wait()
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate()
+        
         if process.returncode == 0:
             log_success(f"Downloaded: {query}")
+            
+            # Try to find the downloaded audio file and embed metadata
+            try:
+                from downloader.metadata import find_downloaded_audio_path
+                audio_path = find_downloaded_audio_path(output_dir, filename)
+                if audio_path:
+                    track_data = {"artist": artist, "track": track}
+                    metadata_success = _embed_metadata_after_download(audio_path, track_data, config or {})
+                    if not metadata_success:
+                        log_warning(f"Metadata embedding failed for {query}")
+                else:
+                    log_warning(f"Could not find downloaded audio file for metadata embedding: {filename}")
+            except Exception as e:
+                log_warning(f"Metadata embedding step failed: {e}")
         else:
             log_error(f"Failed: {query}")
+            if stderr:
+                log_error(f"Error details: {stderr.strip()}")
     except Exception as e:
         log_error(f"Error downloading {query}: {e}")
 
@@ -76,7 +147,7 @@ async def batch_download(tracks, output_dir, audio_format, max_workers=4, config
             for track in tracks:
                 artist = track["artist"].strip()
                 song = track["track"].strip()
-                task = loop.run_in_executor(executor, _download_worker, artist, song, output_dir, audio_format)
+                task = loop.run_in_executor(executor, _download_worker, artist, song, output_dir, audio_format, config)
                 task.add_done_callback(lambda _: pbar.update(1))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -111,3 +182,14 @@ async def batch_download(tracks, output_dir, audio_format, max_workers=4, config
                 pass
             except Exception as e:
                 log_error(f"Cleanup failed: {e}")
+                
+        # Auto-metadata embedding for all downloaded files (legacy batch mode)
+        if config.get("auto_metadata_embedding", True) and config.get("enable_metadata_embedding", True):
+            try:
+                from downloader.metadata import embed_metadata
+                log_info("Embedding metadata in all downloaded files...")
+                embed_metadata(output_dir)
+            except ImportError:
+                pass
+            except Exception as e:
+                log_error(f"Auto metadata embedding failed: {e}")
