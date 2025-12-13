@@ -2,9 +2,6 @@
   "tracks_file": "data/tracks.json",
   "playlists_file": "data/playlists.json",
 
-  "primary_input_source": "csv",
-  "primary_csv_file": "../_WORKING/Electro.csv",
-
   "output_dir": "music",
   "audio_format": "mp3",
   "sleep_between": 5,
