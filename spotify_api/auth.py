@@ -7,7 +7,10 @@ import urllib.parse
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional
 
-import httpx
+try:
+    import httpx
+except ImportError:  # pragma: no cover
+    httpx = None  # type: ignore[assignment]
 
 from .token_manager import TokenInfo, TokenManager
 
@@ -59,7 +62,7 @@ def check_spotify_credentials(config: Dict[str, Any]) -> Dict[str, Any]:
             "scopes": scopes,
             "message": (
                 "Missing spotify_redirect_uri in config.json.\n"
-                "Recommended default: http://localhost:8888/callback"
+                "Recommended default: http://127.0.0.1:8888/callback"
             ),
         }
 
@@ -87,10 +90,10 @@ def check_spotify_credentials(config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def spotify_app_setup_instructions(*, redirect_uri: str = "http://localhost:8888/callback") -> str:
+def spotify_app_setup_instructions(*, redirect_uri: str = "http://127.0.0.1:8888/callback") -> str:
     """Return user-facing setup instructions for creating a Spotify Developer app."""
 
-    redirect_uri = str(redirect_uri or "").strip() or "http://localhost:8888/callback"
+    redirect_uri = str(redirect_uri or "").strip() or "http://127.0.0.1:8888/callback"
     return (
         "Spotify app setup (recommended):\n"
         "1) Go to https://developer.spotify.com/dashboard\n"
@@ -101,6 +104,8 @@ def spotify_app_setup_instructions(*, redirect_uri: str = "http://localhost:8888
         "Notes:\n"
         "- This project uses Authorization Code + PKCE (no client secret required).\n"
         "- Redirect URI must match *exactly* what you configure in the Spotify dashboard.\n"
+        "- Spotify no longer allows 'localhost' as a redirect URI; use a loopback IP (127.0.0.1 / ::1).\n"
+        "- The port is part of the redirect URI; if you change it, update the Spotify app settings too.\n"
     )
 
 
@@ -235,6 +240,11 @@ class SpotifyPKCEAuth:
 
     def _post_form(self, url: str, form: Dict[str, Any]) -> Dict[str, Any]:
         data = {k: str(v) for k, v in (form or {}).items() if v is not None}
+
+        if httpx is None:
+            raise RuntimeError(
+                "Missing dependency: httpx. Install requirements (pip install -r requirements.txt) to use Spotify OAuth."
+            )
 
         try:
             with httpx.Client(timeout=30.0, follow_redirects=False) as client:

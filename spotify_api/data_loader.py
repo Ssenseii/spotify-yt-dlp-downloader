@@ -6,7 +6,7 @@ from .client import SpotifyClient
 class SpotifyDataLoader:
     """High-level helpers for extracting playlists and tracks from Spotify.
 
-    Normalized track dicts are designed to be compatible with TRAV-DJ's existing
+    Normalized track dicts are designed to be compatible with HARMONI's existing
     loader expectations (see utils/loaders.py):
       - required: artist, track
       - recommended: album, uri, release_date, duration_ms, explicit, popularity
@@ -66,7 +66,7 @@ class SpotifyDataLoader:
         include_audio_features: bool = True,
         max_tracks: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
-        """Return playlist tracks as dicts suitable for TRAV-DJ workflows.
+        """Return playlist tracks as dicts suitable for HARMONI workflows.
 
         Output dict keys align with Exportify CSV where possible.
 

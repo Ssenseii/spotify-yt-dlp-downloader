@@ -2,6 +2,9 @@ import asyncio
 import os
 import time
 import webbrowser
+import threading
+import urllib.parse
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import questionary
 
@@ -99,21 +102,103 @@ def _spotify_authenticate(config: dict) -> None:
         pkce_pair = flow["pkce_pair"]
         state = flow["state"]
 
+        redirect_uri = str(config.get("spotify_redirect_uri") or "").strip()
+
         log_info("\n" + "=" * 72)
         log_info("SPOTIFY AUTHENTICATION")
         log_info("=" * 72)
         log_info("1) A browser login will open (or you can copy/paste the URL).")
         log_info("2) After approving, Spotify will redirect you to your redirect_uri.")
-        log_info(
-            "   Your browser will likely show a connection refused / can't reach this page error — this is NORMAL because TRAV-DJ doesn't run a local callback server."
-        )
-        log_info("   (You may see ERR_CONNECTION_REFUSED on the redirect_uri page.)")
-        log_info(
-            "3) Copy the FULL redirect URL from the browser address bar (it will contain `code=`) and paste it back here."
-        )
+        log_info("3) HARMONI will auto-capture the redirect (no copy/paste needed) if it can bind the loopback callback.")
+        log_info("   If it cannot (port in use / firewall / non-loopback redirect), you can still paste the URL manually.")
         log_info("")
         log_info(f"Authorize URL:\n{auth_url}")
         log_info("=" * 72)
+
+        # --- Minimal local callback server (loopback only) ---
+        server = None
+        server_thread = None
+        callback_result = {"full_url": None, "error": None}
+
+        parsed_redirect = urllib.parse.urlparse(redirect_uri) if redirect_uri else None
+        can_listen = bool(
+            parsed_redirect
+            and parsed_redirect.scheme == "http"
+            and (parsed_redirect.hostname in ("127.0.0.1", "::1"))
+            and (parsed_redirect.port is not None)
+            and (parsed_redirect.path or "/")
+        )
+
+        if can_listen:
+            host = parsed_redirect.hostname
+            port = int(parsed_redirect.port)
+            expected_path = parsed_redirect.path or "/"
+
+            # In Docker, binding to 127.0.0.1 only listens on the container loopback and
+            # won't accept traffic coming from the host via published ports.
+            running_in_docker = os.path.exists("/.dockerenv") or bool(os.environ.get("container"))
+            bind_host = host
+            if running_in_docker and host == "127.0.0.1":
+                bind_host = "0.0.0.0"
+
+            class _SpotifyCallbackHandler(BaseHTTPRequestHandler):
+                def do_GET(self):  # noqa: N802 (stdlib naming)
+                    try:
+                        path, _, query = self.path.partition("?")
+                        if path != expected_path:
+                            self.send_response(404)
+                            self.send_header("Content-Type", "text/plain; charset=utf-8")
+                            self.end_headers()
+                            self.wfile.write(b"Not Found")
+                            return
+
+                        # Reconstruct the full redirect URL so we can reuse existing parsing.
+                        if query:
+                            full = f"{redirect_uri}?{query}"
+                        else:
+                            full = redirect_uri
+
+                        callback_result["full_url"] = full
+
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/html; charset=utf-8")
+                        self.end_headers()
+                        self.wfile.write(
+                            (
+                                "<html><head><title>HARMONI</title></head><body>"
+                                "<h2>Spotify authentication received.</h2>"
+                                "<p>You can close this tab and return to the terminal.</p>"
+                                "</body></html>"
+                            ).encode("utf-8")
+                        )
+                    finally:
+                        # Shut down the server after the first request (in a separate thread).
+                        try:
+                            threading.Thread(target=self.server.shutdown, daemon=True).start()
+                        except Exception:
+                            pass
+
+                def log_message(self, format, *args):  # noqa: A003
+                    # Silence default HTTP request logging.
+                    return
+
+            try:
+                server = HTTPServer((bind_host, port), _SpotifyCallbackHandler)
+
+                def _serve_once() -> None:
+                    try:
+                        server.serve_forever(poll_interval=0.1)
+                    except Exception as e:
+                        callback_result["error"] = str(e)
+
+                server_thread = threading.Thread(target=_serve_once, daemon=True)
+                server_thread.start()
+                log_info(f"Local callback server started: {redirect_uri}")
+                if bind_host != host:
+                    log_info(f"(Docker detected) Bound callback server to {bind_host}:{port} so host port-forwarding can reach it.")
+            except Exception as e:
+                log_warning(f"Could not start local callback server on {redirect_uri}: {e}")
+                server = None
 
         if questionary.confirm("Open the authorize URL in your default browser?", default=True).ask():
             try:
@@ -121,9 +206,28 @@ def _spotify_authenticate(config: dict) -> None:
             except Exception:
                 pass
 
-        pasted = questionary.text(
-            "Paste the full redirect URL (preferred) OR just the code=... value:"
-        ).ask()
+        # If the callback server is running, wait for it to receive the redirect.
+        pasted = ""
+        if server is not None:
+            log_info("Waiting for Spotify redirect to hit the local callback (timeout: 180 seconds)...")
+            start = time.time()
+            while time.time() - start < 180:
+                if callback_result.get("full_url"):
+                    pasted = str(callback_result["full_url"]).strip()
+                    break
+                if callback_result.get("error"):
+                    break
+                time.sleep(0.1)
+
+            if not pasted:
+                log_warning("Did not receive a callback within the timeout (or the callback server failed).")
+
+        # Fallback: ask user to paste the redirect URL or raw code.
+        if not pasted:
+            pasted = questionary.text(
+                "Paste the full redirect URL (preferred) OR just the code=... value:"
+            ).ask()
+
         pasted = (pasted or "").strip()
         if not pasted:
             log_warning("No redirect URL / code provided. Cancelling auth.")

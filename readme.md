@@ -48,7 +48,7 @@ HARMONI can now load tracks directly from your Spotify account (playlists + like
 
 - A Spotify account
 - (Recommended) a Spotify Developer app **Client ID**
-- A Redirect URI (default: `http://localhost:8888/callback`)
+- A Redirect URI (default: `http://127.0.0.1:8888/callback`)
 
 > This project uses **Authorization Code + PKCE**, so **no client secret is required**.
 
@@ -57,7 +57,7 @@ HARMONI can now load tracks directly from your Spotify account (playlists + like
 1. Go to https://developer.spotify.com/dashboard
 2. Create an app (or select an existing app)
 3. In the app settings, add this Redirect URI **exactly** (must match byte-for-byte):
-   - `http://localhost:8888/callback`
+   - `http://127.0.0.1:8888/callback`
 4. Copy your **Client ID**
 5. Paste it into your config:
    - `spotify_client_id` in `spotify-yt-dlp-downloader/config.json`
@@ -69,7 +69,7 @@ These are the key settings used by the Spotify Web API workflow:
 ```json
 {
   "spotify_client_id": "", 
-  "spotify_redirect_uri": "http://localhost:8888/callback",
+  "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
   "spotify_scopes": [
     "playlist-read-private",
     "playlist-read-collaborative",
@@ -85,6 +85,7 @@ Notes:
 - `spotify_scopes` controls what Spotify permissions you request.
   - The defaults support reading your playlists and your liked songs.
 - Token caching is stored at `data/spotify_tokens.json` when enabled.
+- Spotify no longer allows `localhost` as a redirect URI; use a loopback IP like `127.0.0.1`.
 
 ### 3) Authenticate (OAuth PKCE) in the app
 
@@ -93,7 +94,8 @@ Notes:
 3. Choose: **Authenticate with Spotify (OAuth PKCE)**
 4. The app will show an authorize URL and offer to open it in your browser
 5. After you approve, Spotify redirects to your `spotify_redirect_uri`
-6. Copy the **FULL redirect URL** from your browser and paste it back into the HARMONI CLI when prompted.
+6. HARMONI starts a tiny local callback server and should auto-capture the redirect.
+   - If the callback server cannot start (port in use / restricted environment), it will fall back to asking you to paste the full redirect URL.
 
 After authentication, HARMONI caches the token (if enabled) and will reuse/refresh it automatically.
 
@@ -247,7 +249,7 @@ If you prefer file-based workflows (CSV/JSON), HARMONI still supports Spotify ex
 - **Spotify Web API (recommended):**
   - a Spotify account
   - your own Spotify Developer app **Client ID**
-  - a Redirect URI (default: `http://localhost:8888/callback`)
+  - a Redirect URI (default: `http://127.0.0.1:8888/callback`)
 - **Legacy file-based inputs:** Exportify CSVs and/or Spotify official export JSON
 
 > Prefer not installing system dependencies? Use the Docker deployment below.
@@ -319,7 +321,7 @@ From the `spotify-yt-dlp-downloader/` folder:
 
 ```bash
 docker compose build
-docker compose run --rm spotify-yt-dlp-downloader
+docker compose run --rm --service-ports spotify-yt-dlp-downloader
 ```
 
 > If you have an older Docker setup, `docker-compose` may be the correct command.
@@ -395,7 +397,7 @@ Edit `config.json` to set your preferences:
   "average_download_time": 20,
 
   "spotify_client_id": "",
-  "spotify_redirect_uri": "http://localhost:8888/callback",
+  "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
   "spotify_scopes": [
     "playlist-read-private",
     "playlist-read-collaborative",
