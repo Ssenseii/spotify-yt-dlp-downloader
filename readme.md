@@ -15,7 +15,6 @@ Features interactive menus, system checks, download management, metadata embeddi
 ## 📌 Features
 
 **NEW: Spotify Web API (OAuth PKCE)** — authenticate and download directly from **your Spotify playlists** and **Liked Songs**
-  - Optional: fetch Spotify audio features (tempo/energy/etc.) to improve metadata enrichment
  - **Enhanced Interactive CLI menus** for downloads, management, and automation
  - **Batch and single downloads** pick and choose what you prefer
  - **Playlist file download**: using the playlist file.
@@ -109,7 +108,6 @@ From the same Spotify menu:
 You’ll be prompted to:
 
 - pick playlists (checkbox UI)
-- optionally fetch Spotify audio features (tempo/energy/etc.)
 - optionally cap the maximum tracks loaded (for large libraries)
 - choose tracks to download using the per-playlist song selection UI
 

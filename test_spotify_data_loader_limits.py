@@ -82,15 +82,11 @@ class FakeSpotifyClient:
             )
         return {"items": items, "total": self.total_playlists, "limit": limit, "offset": offset}
 
-    def audio_features(self, ids):
-        # Not needed for these tests.
-        return {"audio_features": []}
-
 
 class TestSpotifyDataLoaderLimits(unittest.TestCase):
     def test_load_liked_songs_max_tracks_caps_results(self):
         loader = SpotifyDataLoader(FakeSpotifyClient(total_liked=120))
-        tracks = loader.load_liked_songs(include_audio_features=False, max_tracks=60)
+        tracks = loader.load_liked_songs(max_tracks=60)
         self.assertEqual(len(tracks), 60)
         self.assertEqual(tracks[0]["spotify_id"], "liked0")
         self.assertEqual(tracks[-1]["spotify_id"], "liked59")
@@ -98,7 +94,7 @@ class TestSpotifyDataLoaderLimits(unittest.TestCase):
 
     def test_load_playlist_tracks_max_tracks_caps_results(self):
         loader = SpotifyDataLoader(FakeSpotifyClient(total_playlist_tracks=215))
-        tracks = loader.load_playlist_tracks("any", include_audio_features=False, max_tracks=125)
+        tracks = loader.load_playlist_tracks("any", max_tracks=125)
         self.assertEqual(len(tracks), 125)
         self.assertEqual(tracks[0]["spotify_id"], "pl0")
         self.assertEqual(tracks[-1]["spotify_id"], "pl124")

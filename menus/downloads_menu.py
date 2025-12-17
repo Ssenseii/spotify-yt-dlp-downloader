@@ -326,11 +326,6 @@ def _spotify_download_from_playlists(config: dict) -> None:
             log_info("")
             return
 
-        include_audio_features = questionary.confirm(
-            "Fetch Spotify audio features (tempo/energy/etc.)? (Slower, but improves metadata)",
-            default=False,
-        ).ask()
-
         # Limit for safety; users can re-run if they want more.
         max_tracks = questionary.text(
             "Max tracks to load per playlist (blank = no limit; recommended: 300):",
@@ -347,7 +342,6 @@ def _spotify_download_from_playlists(config: dict) -> None:
             log_info(f"Loading playlist from Spotify: {pl_name}")
             tracks = loader.load_playlist_tracks(
                 pid,
-                include_audio_features=bool(include_audio_features),
                 max_tracks=max_tracks_int,
             )
             if not tracks:
@@ -409,11 +403,6 @@ def _spotify_download_liked_songs(config: dict) -> None:
 
         loader = SpotifyDataLoader(client)
 
-        include_audio_features = questionary.confirm(
-            "Fetch Spotify audio features (tempo/energy/etc.)? (Slower, but improves metadata)",
-            default=False,
-        ).ask()
-
         max_tracks = questionary.text(
             "Max liked songs to load (blank = no limit; recommended: 500):",
             default="500",
@@ -422,7 +411,7 @@ def _spotify_download_liked_songs(config: dict) -> None:
         max_tracks_int = int(max_tracks) if max_tracks.isdigit() else None
 
         log_info("Loading liked songs from Spotify...")
-        tracks = loader.load_liked_songs(include_audio_features=bool(include_audio_features), max_tracks=max_tracks_int)
+        tracks = loader.load_liked_songs(max_tracks=max_tracks_int)
         if not tracks:
             log_info("No liked songs returned (or none were usable).")
             return

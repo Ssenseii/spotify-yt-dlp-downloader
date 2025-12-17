@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from .auth import SpotifyPKCEAuth
 from .token_manager import TokenInfo, TokenManager
+from utils.logger import log_warning
 
 
 SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1"
@@ -115,6 +116,36 @@ class SpotifyClient:
                 headers = dict(getattr(e, "headers", {}) or {})
                 body = (e.read().decode("utf-8") if hasattr(e, "read") else "")
 
+                # --- Diagnostics for common auth issues (401/403) ---
+                if status in (401, 403):
+                    www_auth = headers.get("WWW-Authenticate") or headers.get("www-authenticate")
+                    msg = None
+                    try:
+                        payload = json.loads(body) if body else {}
+                        if isinstance(payload, dict):
+                            err = payload.get("error")
+                            if isinstance(err, dict):
+                                msg = err.get("message")
+                    except Exception:
+                        msg = None
+
+                    desired_scopes = [str(s).strip() for s in (self.config.get("spotify_scopes") or []) if str(s).strip()]
+                    token_scopes = [s for s in str(getattr(self._token, "scope", "") or "").split() if s]
+                    missing_scopes = sorted(set(desired_scopes) - set(token_scopes))
+
+                    # Keep logs actionable and avoid leaking secrets.
+                    log_warning(
+                        "Spotify API auth failure diagnostics:\n"
+                        f"- HTTP status: {status}\n"
+                        f"- Endpoint: {method.upper()} {path}\n"
+                        + (f"- WWW-Authenticate: {www_auth}\n" if www_auth else "")
+                        + (f"- Error message: {msg}\n" if msg else "")
+                        + (f"- Token scope: {getattr(self._token, 'scope', None)}\n" if self._token else "- Token scope: <no token loaded>\n")
+                        + (f"- Config spotify_scopes: {desired_scopes}\n" if desired_scopes else "- Config spotify_scopes: []\n")
+                        + (f"- Missing scopes vs config: {missing_scopes}\n" if missing_scopes else "")
+                        + (f"- Raw body: {body}" if body else "")
+                    )
+
                 # 401: token invalid/expired (server-side); try refresh once.
                 if status == 401 and retry_401_refresh and attempt <= max_retries:
                     if self._token and self._token.refresh_token and bool(self.config.get("spotify_auto_refresh", True)):
@@ -144,7 +175,16 @@ class SpotifyClient:
                     self._sleep_with_jitter(min(60.0, delay))
                     continue
 
-                raise RuntimeError(f"Spotify API error {status}: {body}") from e
+                # Prefer the server-provided message when available.
+                detail = body
+                try:
+                    payload = json.loads(body) if body else {}
+                    if isinstance(payload, dict) and isinstance(payload.get("error"), dict) and payload["error"].get("message"):
+                        detail = str(payload["error"].get("message"))
+                except Exception:
+                    pass
+
+                raise RuntimeError(f"Spotify API error {status}: {detail}") from e
             except Exception as e:
                 if attempt <= max_retries:
                     delay = backoff_base * (2 ** max(0, attempt - 1))
@@ -203,14 +243,6 @@ class SpotifyClient:
 
     def current_user_saved_tracks(self, *, limit: int = 50, offset: int = 0) -> Dict[str, Any]:
         return self.request_json("GET", "/me/tracks", params={"limit": limit, "offset": offset})
-
-    def audio_features(self, ids: List[str]) -> Dict[str, Any]:
-        """Return audio features for up to 100 track ids."""
-
-        ids = [str(i).strip() for i in (ids or []) if str(i).strip()]
-        if not ids:
-            return {"audio_features": []}
-        return self.request_json("GET", "/audio-features", params={"ids": ",".join(ids)})
 
     # -----------------
     # High-level helpers (fully paged)

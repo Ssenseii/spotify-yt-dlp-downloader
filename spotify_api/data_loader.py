@@ -10,8 +10,6 @@ class SpotifyDataLoader:
     loader expectations (see utils/loaders.py):
       - required: artist, track
       - recommended: album, uri, release_date, duration_ms, explicit, popularity
-      - optional audio features: danceability, energy, key, loudness, mode, speechiness,
-        acousticness, instrumentalness, liveness, valence, tempo, time_signature
 
     The song selection UI only relies on {artist, track}, so extra metadata is safe.
     """
@@ -63,7 +61,6 @@ class SpotifyDataLoader:
         playlist_id: str,
         *,
         limit: int = 100,
-        include_audio_features: bool = True,
         max_tracks: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Return playlist tracks as dicts suitable for HARMONI workflows.
@@ -112,16 +109,12 @@ class SpotifyDataLoader:
         if max_tracks is not None and len(tracks) > int(max_tracks):
             tracks = tracks[: int(max_tracks)]
 
-        if include_audio_features:
-            self._enrich_with_audio_features(tracks)
-
         return tracks
 
     def load_liked_songs(
         self,
         *,
         limit: int = 50,
-        include_audio_features: bool = True,
         max_tracks: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Return the user's saved tracks (Liked Songs).
@@ -167,9 +160,6 @@ class SpotifyDataLoader:
         if max_tracks is not None and len(tracks) > int(max_tracks):
             tracks = tracks[: int(max_tracks)]
 
-        if include_audio_features:
-            self._enrich_with_audio_features(tracks)
-
         return tracks
 
     def load_user_playlists_with_tracks(
@@ -178,7 +168,6 @@ class SpotifyDataLoader:
         include_liked_songs: bool = False,
         playlist_limit: int = 50,
         track_limit: int = 100,
-        include_audio_features: bool = True,
     ) -> List[Dict[str, Any]]:
         """Load the current user's playlists and attach normalized track lists.
 
@@ -193,7 +182,6 @@ class SpotifyDataLoader:
         if include_liked_songs:
             liked = self.load_liked_songs(
                 limit=min(50, int(track_limit)),
-                include_audio_features=include_audio_features,
                 max_tracks=int(track_limit),
             )
             out.append({"name": "Liked Songs", "tracks": liked})
@@ -208,7 +196,6 @@ class SpotifyDataLoader:
             tracks = self.load_playlist_tracks(
                 pid,
                 limit=min(100, int(track_limit)),
-                include_audio_features=include_audio_features,
                 max_tracks=int(track_limit),
             )
             out.append({"name": name, "tracks": tracks})
@@ -290,54 +277,3 @@ class SpotifyDataLoader:
             return None
 
         return cleaned
-
-    def _enrich_with_audio_features(self, tracks: List[Dict[str, Any]]) -> None:
-        """Fetch /audio-features for tracks (by spotify_id) and merge into track dicts in-place."""
-
-        ids = [str(t.get("spotify_id")).strip() for t in tracks if str(t.get("spotify_id") or "").strip()]
-        if not ids:
-            return
-
-        # Spotify supports up to 100 ids per request.
-        features_by_id: Dict[str, Dict[str, Any]] = {}
-        batch_size = 100
-        for i in range(0, len(ids), batch_size):
-            batch = ids[i : i + batch_size]
-            payload = self.client.audio_features(batch)
-            feats = payload.get("audio_features") or []
-            if not isinstance(feats, list):
-                continue
-            for f in feats:
-                if not isinstance(f, dict):
-                    continue
-                fid = str(f.get("id") or "").strip()
-                if not fid:
-                    continue
-                features_by_id[fid] = f
-
-        # Map Spotify audio-features keys into Exportify-like naming.
-        key_map = {
-            "danceability": "danceability",
-            "energy": "energy",
-            "key": "key",
-            "loudness": "loudness",
-            "mode": "mode",
-            "speechiness": "speechiness",
-            "acousticness": "acousticness",
-            "instrumentalness": "instrumentalness",
-            "liveness": "liveness",
-            "valence": "valence",
-            "tempo": "tempo",
-            "time_signature": "time_signature",
-        }
-
-        for t in tracks:
-            tid = str(t.get("spotify_id") or "").strip()
-            if not tid:
-                continue
-            f = features_by_id.get(tid)
-            if not f:
-                continue
-            for src_key, dst_key in key_map.items():
-                if src_key in f and f[src_key] is not None:
-                    t[dst_key] = f[src_key]

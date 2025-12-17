@@ -87,17 +87,6 @@ class TestSpotifyNormalization(unittest.TestCase):
         self.assertIn("A", normalized["artist"])
         self.assertIn("B", normalized["artist"])
 
-    def test_audio_features_enrichment(self):
-        class FakeClient:
-            def audio_features(self, ids):
-                return {"audio_features": [{"id": ids[0], "tempo": 128.5, "energy": 0.9}]}
-
-        loader = SpotifyDataLoader(FakeClient())
-        tracks = [{"artist": "A", "track": "Song", "spotify_id": "123"}]
-        loader._enrich_with_audio_features(tracks)
-        self.assertEqual(tracks[0].get("tempo"), 128.5)
-        self.assertEqual(tracks[0].get("energy"), 0.9)
-
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
