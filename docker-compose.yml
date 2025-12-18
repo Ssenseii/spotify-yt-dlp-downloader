@@ -11,18 +11,15 @@ services:
     stdin_open: true
     tty: true
 
+    # Spotify OAuth (PKCE) loopback callback:
+    # - Your Spotify app Redirect URI must match your config.json `spotify_redirect_uri` exactly.
+    # - If `spotify_redirect_uri` uses port 8888 (default: http://127.0.0.1:8888/callback), publish 8888.
+    # - If you change the port in `spotify_redirect_uri`, update the mapping below to match.
+    ports:
+      - "8888:8888"
+
     volumes:
       - ./data:/app/data
       - ./music:/app/music
       - ./export:/app/export
       - ./config.json:/app/config.json
-
-    environment:
-      - PYTHONUNBUFFERED=1
-      - TERM=xterm-256color
-
-    # Avoid unexpected restarts when the user exits the CLI.
-    restart: "no"
-
-    # Healthchecks aren't very meaningful for an interactive CLI process,
-    # so none are defined here.

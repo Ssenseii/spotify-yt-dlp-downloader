@@ -16,5 +16,15 @@
 
   "sync_write_tracks_json": false,
   "auto_sync_enabled": false,
-  "auto_sync_interval": 3600
+  "auto_sync_interval": 3600,
+
+  "spotify_client_id": "",
+  "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
+  "spotify_scopes": [
+    "playlist-read-private",
+    "playlist-read-collaborative",
+    "user-library-read"
+  ],
+  "spotify_cache_tokens": true,
+  "spotify_auto_refresh": true
 }

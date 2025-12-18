@@ -21,5 +21,19 @@ if [ ! -d ".venv" ]; then
     echo "Dependencies installed successfully"
 fi
 
-# Activate virtual environment and run the application
-source .venv/bin/activate && python3 main.py
+# Activate virtual environment
+source .venv/bin/activate
+
+# If new dependencies were added (e.g., httpx for Spotify OAuth), ensure they're installed
+python3 -c "import httpx" >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Missing dependencies detected (e.g., httpx). Installing/updating requirements..."
+    pip install -r requirements.txt
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to install/update dependencies"
+        exit 1
+    fi
+fi
+
+# Run the application
+python3 main.py

@@ -5,3 +5,4 @@ mutagen
 schedule
 questionary
 tqdm
+httpx

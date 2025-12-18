@@ -1,7 +1,7 @@
 # 🎶 HARMONI
 
 A modular, Python-based command-line tool for downloading music from Spotify & Youtube using **yt-dlp**.  
-Features interactive menus, system checks, download management, metadata embedding, and robust logging.
+Features interactive menus, system checks, download management, metadata embedding, robust logging, and **Spotify Web API (OAuth PKCE) playlist/liked-song loading**.
 
 ---
 
@@ -14,141 +14,243 @@ Features interactive menus, system checks, download management, metadata embeddi
 
 ## 📌 Features
 
-- **Enhanced Interactive CLI menus** for downloads, management, and automation
-- **Batch and single downloads** pick and choose what you prefer
-- **Playlist file download**: using the playlist file.
-- **Download from Exportify CSVs** that you can get from [Exportify](https://exportify.net/)
-- **Download From Youtube** paste the link and download playlist or video as audio file.
-- **Flexible playlist downloads**: whole playlists at once or individual ones.
-- **System resource checks** (CPU, RAM, storage)
-- **Track management** via JSON files (pending, failed, history)
-- **Download by artist and song name**
-- **Configurable settings** in `config.json`
-- **metadata embedding** for downloaded music 
-- **Retry failed downloads**
-- **Duplicate detection and file organization**
-- **Colorful terminal logs** (via `colorama`)
-- **Persistent logging** to `app.log`
-- **Modular, maintainable codebase**
-- **Export library data** as JSON with detailed track and album info.
-- **Clean up music library** by removing broken, or unreadable tracks.
-- **Choosing audio format** and target bitrate w/ quality and size impacts.
+**NEW: Spotify Web API (OAuth PKCE)** — authenticate and download directly from **your Spotify playlists** and **Liked Songs**
+ - **Enhanced Interactive CLI menus** for downloads, management, and automation
+ - **Batch and single downloads** pick and choose what you prefer
+ - **Playlist file download**: using the playlist file.
+ - **Download from Exportify CSVs** that you can get from [Exportify](https://exportify.net/)
+ - **Download From Youtube** paste the link and download playlist or video as audio file.
+ - **Flexible playlist downloads**: whole playlists at once or individual ones.
+ - **System resource checks** (CPU, RAM, storage)
+ - **Track management** via JSON files (pending, failed, history)
+ - **Download by artist and song name**
+ - **Configurable settings** in `config.json`
+ - **metadata embedding** for downloaded music 
+ - **Retry failed downloads**
+ - **Duplicate detection and file organization**
+ - **Colorful terminal logs** (via `colorama`)
+ - **Persistent logging** to `app.log`
+ - **Modular, maintainable codebase**
+ - **Export library data** as JSON with detailed track and album info.
+ - **Clean up music library** by removing broken, or unreadable tracks.
+ - **Choosing audio format** and target bitrate w/ quality and size impacts.
 
+
+ ---
+ 
+
+## 🎧 Spotify Web API (NEW) — Setup + Authentication (Recommended)
+
+HARMONI can now load tracks directly from your Spotify account (playlists + liked songs) via the Spotify Web API.
+
+### What you need
+
+- A Spotify account
+- (Recommended) a Spotify Developer app **Client ID**
+- A Redirect URI (default: `http://127.0.0.1:8888/callback`)
+
+> This project uses **Authorization Code + PKCE**, so **no client secret is required**.
+
+### 1) Create a Spotify app (recommended)
+
+1. Go to https://developer.spotify.com/dashboard
+2. Create an app (or select an existing app)
+3. In the app settings, add this Redirect URI **exactly** (must match byte-for-byte):
+   - `http://127.0.0.1:8888/callback`
+4. Copy your **Client ID**
+5. Paste it into your config:
+   - `spotify_client_id` in `spotify-yt-dlp-downloader/config.json`
+
+### 2) Configure Spotify API settings in config.json
+
+These are the key settings used by the Spotify Web API workflow:
+
+```json
+{
+  "spotify_client_id": "", 
+  "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
+  "spotify_scopes": [
+    "playlist-read-private",
+    "playlist-read-collaborative",
+    "user-library-read"
+  ],
+  "spotify_cache_tokens": true,
+  "spotify_auto_refresh": true
+}
+```
+
+Notes:
+
+- `spotify_scopes` controls what Spotify permissions you request.
+  - The defaults support reading your playlists and your liked songs.
+- Token caching is stored at `data/spotify_tokens.json` when enabled.
+- Spotify no longer allows `localhost` as a redirect URI; use a loopback IP like `127.0.0.1`.
+
+### 3) Authenticate (OAuth PKCE) in the app
+
+1. Run the app
+2. Go to: **Downloads Menu → Spotify Web API (OAuth) — Playlists / Liked Songs**
+3. Choose: **Authenticate with Spotify (OAuth PKCE)**
+4. The app will show an authorize URL and offer to open it in your browser
+5. After you approve, Spotify redirects to your `spotify_redirect_uri`
+6. HARMONI starts a tiny local callback server and should auto-capture the redirect.
+   - If the callback server cannot start (port in use / restricted environment), it will fall back to asking you to paste the full redirect URL.
+
+After authentication, HARMONI caches the token (if enabled) and will reuse/refresh it automatically.
+
+### 4) Download from playlists or liked songs
+
+From the same Spotify menu:
+
+- **Download from my playlists**
+- **Download from liked songs**
+
+You’ll be prompted to:
+
+- pick playlists (checkbox UI)
+- optionally cap the maximum tracks loaded (for large libraries)
+- choose tracks to download using the per-playlist song selection UI
 
 ---
 
-## 🛠 Prerequisite for Spotify Export downloads: **Export Your Spotify Data**
+## 🛠 Spotify Export downloads (Legacy inputs)
 
-> **NOTE:** You have two options for getting Spotify data into the application:
-> 1. **Official Spotify Data Export** (detailed below)
-> 2. **Exportify** (recommended alternative - no waiting for email)
+If you are using the **Spotify Web API** workflow above, you can skip this section.
 
-### Option 1: Official Spotify Data Export
+If you prefer file-based workflows (CSV/JSON), HARMONI still supports Spotify exports via either **Exportify** or Spotify’s official data export.
 
-Before using HARMONI for spotify downloads, you can request your personal Spotify data from Spotify's Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
+ > **NOTE:** You have two options for getting Spotify data into the application:
+ > 1. **Official Spotify Data Export** (detailed below)
+ > 2. **Exportify** (recommended alternative - no waiting for email)
 
-This YourLibrary.json file contains your saved tracks, albums, and playlists metadata, which HARMONI can use to generate the track list and manage downloads.
+ ### Option 1: Official Spotify Data Export
 
-How to get your Spotify data:
+ Before using HARMONI for spotify downloads, you can request your personal Spotify data from Spotify's Privacy page. Spotify will provide you with a ZIP file containing several JSON files, including one named YourLibrary.json.
 
-    Go to Spotify's Privacy Request page.
+ This YourLibrary.json file contains your saved tracks, albums, and playlists metadata, which HARMONI can use to generate the track list and manage downloads.
 
-    Request your personal data export.
+ How to get your Spotify data:
 
-    Spotify will email you a ZIP file when ready.
+     Go to Spotify's Privacy Request page.
 
-    Extract the ZIP and locate YourLibrary.json.
+     Request your personal data export.
 
-    Use or convert this JSON file as the basis for your data/tracks.json to run HARMONI.
+     Spotify will email you a ZIP file when ready.
 
-### Option 2: Exportify (Recommended Alternative)
+     Extract the ZIP and locate YourLibrary.json.
 
-Exportify is a simpler, faster way to get your Spotify playlists without waiting for Spotify's email response.
+     Use or convert this JSON file as the basis for your data/tracks.json to run HARMONI.
 
-How to use Exportify:
+ ### Option 2: Exportify (Recommended Alternative)
 
-    Go to https://exportify.net/
+ Exportify is a simpler, faster way to get your Spotify playlists without waiting for Spotify's email response.
 
-    Click "Login with Spotify" and authorize the application
+ How to use Exportify:
 
-    Click "Export" next to your chosen playlist
+     Go to https://exportify.net/
 
-    Save the CSV file to the data/exportify/ folder in your project
+     Click "Login with Spotify" and authorize the application
 
-Exportify downloads are immediately available and don't require the waiting period associated with official Spotify data exports.
+     Click "Export" next to your chosen playlist
 
-This step is essential to generate the input data HARMONI needs for downloading your favorite music.
+     Save the CSV file to the data/exportify/ folder in your project
+
+ Exportify downloads are immediately available and don't require the waiting period associated with official Spotify data exports.
+
+ This step is essential to generate the input data HARMONI needs for downloading your favorite music.
+
+ ---
+
+ ## 📂 Project Structure
+
+ ```
+ spotify-ytdlp/
+ │
+ ├── main.py                # Entry point, interactive menus
+ ├── config.py              # Loads config from config.json
+ ├── config.json            # User-configurable settings
+ ├── requirements.txt       # Dependencies
+ ├── changelog.md           # change log
+ ├── app.log                # Log file
+ ├── todo.md                # Development notes
+ ├── constants.py           # constants
+ │
+ ├── history/
+ │   └── prototype.py       # First version of this entire app 
+ 
+ ├── data/
+ │   ├── exportify              # Directory where you should place your exportify csv files
+ │   ├── tracks.json            # Track list (with artist, album, track, uri)
+ │   ├── playlists.json         # (Optional/legacy) playlists export format
+ │   ├── failed_downloads.json  # Tracks that failed to download
+ │   └── download_history.json  # Downloaded tracks history
+│   └── spotify_tokens.json    # (Optional) cached Spotify OAuth token (Spotify Web API)
+ 
+ ├── export/
+ │   ├── potyy_export_(MDY).json  # export of tracks in music folder
+ │   └── playlist_tracklist.json  # playlist in tracks format
+ 
+ ├── downloader/
+ │   ├── base_downloader.py                # Download logic (single, batch)
+ │   ├── playlist_download.py              # Download playlists
+ │   ├── metadata.py                       # Embed metadata
+ │   ├── retry_manager.py                  # Retry failed downloads
+ │   ├── youtube_link_downloader.py        # Download Directly from youtube link
+ │   └── __init__.py│
+ 
+ ├── menus/                     # Interactive menu modules
+ │   ├── automation_menu.py     # Menu for automation section
+ │   ├── downloads_menu.py      # Menu for downloads section
+ │   ├── main_menu.py           # Menu for main section
+ │   ├── management_menu.py     # Menu for management section
+ │   ├── tools_menu.py          # Menu for tools section
+ │   └── __init__.py
++
++├── spotify_api/                # Spotify Web API (stdlib-only) OAuth PKCE + client + loaders
+ 
+ ├── tools/
+ │   ├── choose_audio_format.py      # pick global format for download
+ │   ├── compress_music.py           # compress songs to a certain format
+ │   ├── dependency_check.py         # check if your dependencies are installed
+ │   ├── library_cleanup.py          # deletes broken track files
+ │   ├── library_export_json.py      # all tracks in music folder as json
+ │   ├── open_log.py                 # opens app.log
+ │   ├── playlist_to_tracklist.py    # playlist turned into tracklist format
+ │   └── __init__.py
+ 
+ ├── managers/
+ │   ├── file_manager.py        # Duplicate detection, file organization
+ │   ├── resume_manager.py      # Resume batch downloads
+ │   ├── schedule_manager.py    # Scheduled downloads
+ │   └── __init__.py
+ 
+ ├── utils/
+ │   ├── logger.py              # Logging utilities
+ │   ├── loaders.py             # Loading utilities
+ │   ├── system.py              # System resource checks
+ │   ├── track_checker.py       # Check downloaded files
+ │   └── __init__.py
+ 
+ └── music/                 # Downloaded music files
+ ```
 
 ---
 
-## 📂 Project Structure
+## ✅ Prerequisites
 
-```
-spotify-ytdlp/
-│
-├── main.py                # Entry point, interactive menus
-├── config.py              # Loads config from config.json
-├── config.json            # User-configurable settings
-├── requirements.txt       # Dependencies
-├── changelog.md           # change log
-├── app.log                # Log file
-├── todo.md                # Development notes
-├── constants.py           # constants
-│
-├── history/
-│   └── prototype.py       # First version of this entire app 
+- Python 3.9+
+- **ffmpeg** available on your system PATH (required for `yt-dlp` audio extraction/post-processing)
+- Internet connection (YouTube)
 
-├── data/
-│   ├── exportify              # Directory where you should place your exportify csv files
-│   ├── tracks.json            # Track list (with artist, album, track, uri)
-│   ├── failed_downloads.json  # Tracks that failed to download
-│   └── download_history.json  # Downloaded tracks history
+### Spotify input options (choose one)
 
-├── export/
-│   ├── potyy_export_(MDY).json  # export of tracks in music folder
-│   └── playlist_tracklist.json  # playlist in tracks format
+- **Spotify Web API (recommended):**
+  - a Spotify account
+  - your own Spotify Developer app **Client ID**
+  - a Redirect URI (default: `http://127.0.0.1:8888/callback`)
+- **Legacy file-based inputs:** Exportify CSVs and/or Spotify official export JSON
 
-├── downloader/
-│   ├── base_downloader.py                # Download logic (single, batch)
-│   ├── playlist_download.py              # Download playlists
-│   ├── metadata.py                       # Embed metadata
-│   ├── retry_manager.py                  # Retry failed downloads
-│   ├── youtube_link_downloader.py        # Download Directly from youtube link
-│   └── __init__.py│
-
-├── menus/                     # Interactive menu modules
-│   ├── automation_menu.py     # Menu for automation section
-│   ├── downloads_menu.py      # Menu for downloads section
-│   ├── main_menu.py           # Menu for main section
-│   ├── management_menu.py     # Menu for management section
-│   ├── tools_menu.py          # Menu for tools section
-│   └── __init__.py
-
-├── tools/
-│   ├── choose_audio_format.py      # pick global format for download
-│   ├── compress_music.py           # compress songs to a certain format
-│   ├── dependency_check.py         # check if your dependencies are installed
-│   ├── library_cleanup.py          # deletes broken track files
-│   ├── library_export_json.py      # all tracks in music folder as json
-│   ├── open_log.py                 # opens app.log
-│   ├── playlist_to_tracklist.py    # playlist turned into tracklist format
-│   └── __init__.py
-
-├── managers/
-│   ├── file_manager.py        # Duplicate detection, file organization
-│   ├── resume_manager.py      # Resume batch downloads
-│   ├── schedule_manager.py    # Scheduled downloads
-│   └── __init__.py
-
-├── utils/
-│   ├── logger.py              # Logging utilities
-│   ├── loaders.py             # Loading utilities
-│   ├── system.py              # System resource checks
-│   ├── track_checker.py       # Check downloaded files
-│   └── __init__.py
-
-└── music/                 # Downloaded music files
-```
+> Prefer not installing system dependencies? Use the Docker deployment below.
 
 ---
 
@@ -217,7 +319,7 @@ From the `spotify-yt-dlp-downloader/` folder:
 
 ```bash
 docker compose build
-docker compose run --rm spotify-yt-dlp-downloader
+docker compose run --rm --service-ports spotify-yt-dlp-downloader
 ```
 
 > If you have an older Docker setup, `docker-compose` may be the correct command.
@@ -284,12 +386,23 @@ Edit `config.json` to set your preferences:
 
 ```json
 {
-	"tracks_file": "data/tracks.json",
-	"playlists_file": "data/playlists.json",
-	"output_dir": "music",
-	"audio_format": "mp3",
-	"sleep_between": 5,
-	"average_download_time": 20
+  "tracks_file": "data/tracks.json",
+  "playlists_file": "data/playlists.json",
+
+  "output_dir": "music",
+  "audio_format": "mp3",
+  "sleep_between": 5,
+  "average_download_time": 20,
+
+  "spotify_client_id": "",
+  "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
+  "spotify_scopes": [
+    "playlist-read-private",
+    "playlist-read-collaborative",
+    "user-library-read"
+  ],
+  "spotify_cache_tokens": true,
+  "spotify_auto_refresh": true
 }
 ```
 
@@ -337,7 +450,7 @@ Edit `config.json` to set your preferences:
           "localTrack": null,
           "addedDate": "2025-05-03"
         },
-      ],
+      ]
    }]
 }
 ```

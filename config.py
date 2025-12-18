@@ -34,6 +34,18 @@ DEFAULT_CONFIG = {
     "musicbrainz_rate_limit": True,
     "musicbrainz_retries": 3,
     "musicbrainz_backoff_base": 0.75,
+
+    # Spotify Web API (OAuth PKCE)
+    # NOTE: These are optional unless/ until a Spotify API workflow is enabled.
+    "spotify_client_id": "",
+    "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
+    "spotify_scopes": [
+        "playlist-read-private",
+        "playlist-read-collaborative",
+        "user-library-read",
+    ],
+    "spotify_cache_tokens": True,
+    "spotify_auto_refresh": True,
 }
 
 # Profile definitions
@@ -121,6 +133,13 @@ CONFIG_SCHEMA = {
     "musicbrainz_rate_limit": {"type": bool, "required": False},
     "musicbrainz_retries": {"type": int, "required": False, "min": 0, "max": 10},
     "musicbrainz_backoff_base": {"type": (int, float), "required": False, "min": 0.1, "max": 5.0},
+
+    # Spotify Web API (OAuth PKCE)
+    "spotify_client_id": {"type": str, "required": False},
+    "spotify_redirect_uri": {"type": str, "required": False},
+    "spotify_scopes": {"type": list, "required": False, "element_type": str},
+    "spotify_cache_tokens": {"type": bool, "required": False},
+    "spotify_auto_refresh": {"type": bool, "required": False},
 }
 
 
@@ -174,6 +193,16 @@ def validate_config(config: Dict[str, Any]) -> tuple[bool, list[str]]:
             type_names = expected_type.__name__ if not isinstance(expected_type, tuple) else "/".join(t.__name__ for t in expected_type)
             errors.append(f"Field '{key}' must be {type_names}, got {type(value).__name__}")
             continue
+
+        # List element type check (when schema uses: {"type": list, "element_type": ...})
+        if isinstance(value, list) and "element_type" in rules:
+            elem_type = rules["element_type"]
+            bad_elems = [v for v in value if not isinstance(v, elem_type)]
+            if bad_elems:
+                errors.append(
+                    f"Field '{key}' must be a list of {elem_type.__name__}, got invalid elements: {bad_elems}"
+                )
+                continue
 
         # Choices check
         if "choices" in rules and value not in rules["choices"]:

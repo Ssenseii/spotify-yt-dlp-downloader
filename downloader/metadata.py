@@ -269,7 +269,7 @@ def apply_template(metadata: Dict[str, Any], template_name: Optional[str]) -> Di
 
 
 MB_BASE = "https://musicbrainz.org/ws/2"
-MB_USER_AGENT = "TRAV-DJ/1.0 ( https://github.com/ ; metadata )"
+MB_USER_AGENT = "HARMONI/1.0 ( https://github.com/ ; metadata )"
 MB_RATE_LIMIT_SECONDS = 1.05  # MusicBrainz asks for 1 req/sec
 
 

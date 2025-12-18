@@ -7,3 +7,5 @@ dist
 .venv
 data/exportify/*
 !data/exportify/exportify_test_playlist.csv
+config.json
+data/spotify_tokens.json
