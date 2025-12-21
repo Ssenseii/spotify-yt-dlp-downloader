@@ -69,6 +69,8 @@ class SpotifyDataLoader:
 
         max_tracks:
           Optional safety cap to stop paging after N normalized tracks.
+        enrich_metadata:
+          If True, fetch audio features (BPM, key, energy) and genres for all tracks.
         """
 
         tracks: List[Dict[str, Any]] = []
@@ -197,6 +199,7 @@ class SpotifyDataLoader:
                 pid,
                 limit=min(100, int(track_limit)),
                 max_tracks=int(track_limit),
+                enrich_metadata=False,  # Batch export doesn't need enrichment
             )
             out.append({"name": name, "tracks": tracks})
 
@@ -237,6 +240,14 @@ class SpotifyDataLoader:
         album = track_obj.get("album") or {}
         album_name = album.get("name") if isinstance(album, dict) else None
         release_date = album.get("release_date") if isinstance(album, dict) else None
+        
+        # Extract album artwork URL (largest available image)
+        album_art_url = None
+        if isinstance(album, dict):
+            images = album.get("images") or []
+            if isinstance(images, list) and images:
+                # Spotify returns images sorted by size (largest first usually)
+                album_art_url = images[0].get("url") if images[0] else None
 
         uri = track_obj.get("uri")
         spotify_id = track_obj.get("id")
@@ -245,6 +256,7 @@ class SpotifyDataLoader:
             "artist": artist_name or "",
             "track": (track_obj.get("name") or ""),
             "album": album_name or "",
+            "album_art_url": album_art_url,
             "uri": uri,
             "spotify_id": spotify_id,
             "duration_ms": track_obj.get("duration_ms"),

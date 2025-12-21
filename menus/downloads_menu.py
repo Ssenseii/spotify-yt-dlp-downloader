@@ -381,6 +381,7 @@ def _spotify_download_from_playlists(config: dict) -> None:
                     config["output_dir"],
                     config["audio_format"],
                     config["sleep_between"],
+                    config=config,
                 )
             )
 
@@ -450,6 +451,7 @@ def _spotify_download_liked_songs(config: dict) -> None:
                 config["output_dir"],
                 config["audio_format"],
                 config["sleep_between"],
+                config=config,
             )
         )
 
