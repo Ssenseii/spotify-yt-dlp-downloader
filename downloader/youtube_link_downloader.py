@@ -20,23 +20,14 @@ def get_youtube_info(url):
 
         # For playlist, yt-dlp outputs one JSON per line
         lines = result.stdout.strip().split("\n")
-        # #region agent log
-        import json as json_module
-        import time
         data = []
-        for idx, line in enumerate(lines):
+        for line in lines:
             if line.strip():
                 try:
-                    parsed = json_module.loads(line)
-                    data.append(parsed)
-                except json_module.JSONDecodeError as e:
-                    with open('/Users/saadaboussabr/Desktop/Archive/Temp/spotify-yt-dlp-downloader/.cursor/debug.log', 'a') as f:
-                        f.write(json_module.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"downloader/youtube_link_downloader.py:23","message":"JSONDecodeError parsing yt-dlp output - skipping line","data":{"line_index":idx,"line_preview":line[:100],"error":str(e)},"timestamp":int(time.time()*1000)}) + '\n')
-                    # Skip invalid JSON lines instead of crashing
+                    data.append(json.loads(line))
+                except json.JSONDecodeError:
+                    # Skip invalid JSON lines
                     continue
-        with open('/Users/saadaboussabr/Desktop/Archive/Temp/spotify-yt-dlp-downloader/.cursor/debug.log', 'a') as f:
-            f.write(json_module.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"downloader/youtube_link_downloader.py:23","message":"successfully parsed all lines","data":{"lines_count":len(lines),"parsed_count":len(data)},"timestamp":int(time.time()*1000)}) + '\n')
-        # #endregion
         return data
     except Exception as e:
         log_error(f"Error fetching info: {e}")
