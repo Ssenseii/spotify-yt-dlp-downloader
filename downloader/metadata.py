@@ -167,6 +167,7 @@ def normalize_track_metadata(track: Dict[str, Any]) -> Dict[str, Any]:
         "bpm": bpm_str,
         "comment": "; ".join(comment_parts),
         "uri": uri,
+        "album_art_url": _as_str(track.get("album_art_url")),  # Pass through album art URL
         "extra": {},
     }
 
@@ -258,6 +259,7 @@ def apply_template(metadata: Dict[str, Any], template_name: Optional[str]) -> Di
 
     # pass-through for cover art decisions and provenance
     out["uri"] = _as_str(metadata.get("uri"))
+    out["album_art_url"] = _as_str(metadata.get("album_art_url"))  # Preserve album art URL
     out["extra"] = metadata.get("extra") or {}
 
     return out
@@ -389,7 +391,10 @@ def lookup_musicbrainz(artist: str, title: str) -> Optional[MusicBrainzMatch]:
     if not artist_q or not title_q:
         return None
 
-    query = f'artist:"{artist_q}" AND recording:"{title_q}"'
+    # Properly escape quotes in the search query
+    artist_escaped = artist_q.replace('"', '\\"')
+    title_escaped = title_q.replace('"', '\\"')
+    query = f'artist:"{artist_escaped}" AND recording:"{title_escaped}"'
     params = urllib.parse.urlencode(
         {
             "query": query,
@@ -448,7 +453,10 @@ def lookup_musicbrainz_with_config(artist: str, title: str, config: Dict[str, An
     if not artist_q or not title_q:
         return None
 
-    query = f'artist:"{artist_q}" AND recording:"{title_q}"'
+    # Properly escape quotes in the search query
+    artist_escaped = artist_q.replace('"', '\\"')
+    title_escaped = title_q.replace('"', '\\"')
+    query = f'artist:"{artist_escaped}" AND recording:"{title_escaped}"'
     params = urllib.parse.urlencode(
         {
             "query": query,
@@ -524,6 +532,20 @@ def _find_local_album_art(audio_path: str) -> Optional[bytes]:
     return None
 
 
+def _download_album_art(url: str, timeout: int = 10) -> Optional[bytes]:
+    """Download album art from URL."""
+    if not url:
+        return None
+    
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": MB_USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read()
+    except Exception as e:
+        log_warning(f"Failed downloading album art from {url}: {e}")
+        return None
+
+
 def _guess_mime(image_bytes: bytes) -> str:
     if image_bytes.startswith(b"\x89PNG"):
         return "image/png"
@@ -561,6 +583,7 @@ def _embed_mp3(path: str, tags: Dict[str, str], cover_bytes: Optional[bytes], co
         except Exception:
             pass
 
+    # Use EasyID3 for simple tags
     audio = EasyID3(path)
     if tags.get("artist"):
         audio["artist"] = tags["artist"]
@@ -574,23 +597,31 @@ def _embed_mp3(path: str, tags: Dict[str, str], cover_bytes: Optional[bytes], co
         audio["genre"] = tags["genre"]
     if tags.get("bpm"):
         audio["bpm"] = tags["bpm"]
-    if tags.get("comment"):
-        audio["comment"] = tags["comment"]
     audio.save(path)
 
-    if cover_bytes:
-        try:
-            id3 = ID3(path)
-        except ID3NoHeaderError:
-            id3 = ID3()
-        id3["APIC"] = APIC(
-            encoding=3,
-            mime=cover_mime or "image/jpeg",
-            type=3,
-            desc="Cover",
-            data=cover_bytes,
-        )
+    # Use raw ID3 for comment and cover art (EasyID3 doesn't support them properly)
+    try:
+        from mutagen.id3 import COMM
+        id3 = ID3(path)
+        
+        # Add comment if provided
+        if tags.get("comment"):
+            id3["COMM"] = COMM(encoding=3, lang='eng', desc='', text=tags["comment"])
+        
+        # Add cover art if provided
+        if cover_bytes:
+            id3["APIC"] = APIC(
+                encoding=3,
+                mime=cover_mime or "image/jpeg",
+                type=3,
+                desc="Cover",
+                data=cover_bytes,
+            )
+        
         id3.save(path)
+    except Exception:
+        # Not fatal if comment/cover fails
+        pass
 
 
 def _embed_flac(path: str, tags: Dict[str, str], cover_bytes: Optional[bytes], cover_mime: Optional[str]) -> None:
@@ -733,9 +764,14 @@ def _embed_wav(path: str, tags: Dict[str, str], cover_bytes: Optional[bytes], co
                 easy["genre"] = tags["genre"]
             if tags.get("bpm"):
                 easy["bpm"] = tags["bpm"]
-            if tags.get("comment"):
-                easy["comment"] = tags["comment"]
             easy.save(path)
+            
+            # Add comment using raw ID3
+            if tags.get("comment"):
+                from mutagen.id3 import COMM
+                id3 = ID3(path)
+                id3["COMM"] = COMM(encoding=3, lang='eng', desc='', text=tags["comment"])
+                id3.save(path)
         except Exception:
             # If EasyID3 doesn't work, do nothing further.
             pass
@@ -764,6 +800,7 @@ def embed_track_metadata(
     *,
     template: Optional[str] = None,
     allow_musicbrainz: bool = True,
+    config: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """Embed metadata into a single audio file.
 
@@ -790,12 +827,20 @@ def embed_track_metadata(
         need_album = not _as_str(base_meta.get("album"))
         need_date = not _as_str(base_meta.get("date"))
         if (need_album or need_date) and _as_str(base_meta.get("artist")) and _as_str(base_meta.get("title")):
-            mb = lookup_musicbrainz(base_meta["artist"], base_meta["title"])
-            if mb:
-                if need_album and mb.album:
-                    base_meta["album"] = mb.album
-                if need_date and mb.date:
-                    base_meta["date"] = mb.date
+            try:
+                # Use config-aware lookup if config is provided, otherwise use cached version
+                if config:
+                    mb = lookup_musicbrainz_with_config(base_meta["artist"], base_meta["title"], config)
+                else:
+                    mb = lookup_musicbrainz(base_meta["artist"], base_meta["title"])
+                
+                if mb:
+                    if need_album and mb.album:
+                        base_meta["album"] = mb.album
+                    if need_date and mb.date:
+                        base_meta["date"] = mb.date
+            except Exception as e:
+                log_warning(f"MusicBrainz lookup failed for {base_meta.get('artist')} - {base_meta.get('title')}: {e}")
 
     meta = apply_template(base_meta, template)
     issues = validate_metadata(meta)
@@ -816,9 +861,24 @@ def embed_track_metadata(
     cover_bytes = None
     cover_mime = None
     if tpl.get("embed_cover_art"):
+        log_info(f"Checking for album art for {os.path.basename(audio_path)}")
+        
+        # Try local file first
         cover_bytes = _find_local_album_art(audio_path)
         if cover_bytes:
+            log_info(f"  Found local album art ({len(cover_bytes)} bytes)")
+        
+        # If no local file, try downloading from Spotify
+        if not cover_bytes and meta.get("album_art_url"):
+            log_info(f"  Downloading album art from Spotify...")
+            cover_bytes = _download_album_art(meta.get("album_art_url"))
+            if cover_bytes:
+                log_info(f"  Downloaded album art ({len(cover_bytes)} bytes)")
+        
+        if cover_bytes:
             cover_mime = _guess_mime(cover_bytes)
+        else:
+            log_warning(f"  No album art available")
 
     try:
         if ext == ".mp3":

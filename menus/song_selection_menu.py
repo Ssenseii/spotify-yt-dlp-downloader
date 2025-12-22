@@ -15,7 +15,7 @@ def select_songs_for_playlist(playlist_name: str, tracks: list, playlist_dir: st
 
     tracks = tracks or []
 
-    # Normalize incoming tracks to the downloader-required shape.
+    # Normalize incoming tracks - preserve ALL metadata, just ensure required fields exist
     normalized = []
     for t in tracks:
         if not isinstance(t, dict):
@@ -24,7 +24,8 @@ def select_songs_for_playlist(playlist_name: str, tracks: list, playlist_dir: st
         name = (t.get("track") or "").strip()
         if not artist or not name:
             continue
-        normalized.append({"artist": artist, "track": name})
+        # Keep the entire track dictionary to preserve metadata
+        normalized.append(t)
 
     if not normalized:
         log_warning(f"Playlist '{playlist_name}' has no valid tracks.")

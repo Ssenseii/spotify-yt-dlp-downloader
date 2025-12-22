@@ -36,6 +36,7 @@ def _embed_metadata_after_download(
             track,
             template=template,
             allow_musicbrainz=enable_musicbrainz,
+            config=config,
         )
     except ImportError:
         log_warning("Metadata embedding module not available, skipping metadata embedding")
@@ -45,7 +46,7 @@ def _embed_metadata_after_download(
         return False
 
 
-def download_track(artist, track, output_dir, audio_format, sleep_between, config=None):
+def download_track(artist, track, output_dir, audio_format, sleep_between, config=None, track_data=None):
     query = f"{artist} - {track}"
     filename = _get_base_filename(artist, track)
 
@@ -69,8 +70,9 @@ def download_track(artist, track, output_dir, audio_format, sleep_between, confi
                 from downloader.metadata import find_downloaded_audio_path
                 audio_path = find_downloaded_audio_path(output_dir, filename)
                 if audio_path:
-                    track_data = {"artist": artist, "track": track}
-                    metadata_success = _embed_metadata_after_download(audio_path, track_data, config or {})
+                    # Use full track_data if provided, otherwise create minimal dict
+                    metadata = track_data if track_data else {"artist": artist, "track": track}
+                    metadata_success = _embed_metadata_after_download(audio_path, metadata, config or {})
                     if metadata_success:
                         log_info(f"Metadata embedded for {query}")
                     else:
@@ -88,7 +90,9 @@ def download_track(artist, track, output_dir, audio_format, sleep_between, confi
 
 
 # Worker function for a single track
-def _download_worker(artist, track, output_dir, audio_format, config=None):
+def _download_worker(track_dict, output_dir, audio_format, config=None):
+    artist = track_dict.get("artist", "").strip()
+    track = track_dict.get("track", "").strip()
     query = f"{artist} - {track}"
     filename = _get_base_filename(artist, track)
 
@@ -112,8 +116,8 @@ def _download_worker(artist, track, output_dir, audio_format, config=None):
                 from downloader.metadata import find_downloaded_audio_path
                 audio_path = find_downloaded_audio_path(output_dir, filename)
                 if audio_path:
-                    track_data = {"artist": artist, "track": track}
-                    metadata_success = _embed_metadata_after_download(audio_path, track_data, config or {})
+                    # Pass the full track dictionary for complete metadata
+                    metadata_success = _embed_metadata_after_download(audio_path, track_dict, config or {})
                     if not metadata_success:
                         log_warning(f"Metadata embedding failed for {query}")
                 else:
@@ -145,9 +149,8 @@ async def batch_download(tracks, output_dir, audio_format, max_workers=4, config
         tasks = []
         with tqdm(total=len(tracks), desc="Downloading", unit="track") as pbar:
             for track in tracks:
-                artist = track["artist"].strip()
-                song = track["track"].strip()
-                task = loop.run_in_executor(executor, _download_worker, artist, song, output_dir, audio_format, config)
+                # Pass the entire track dictionary to preserve all metadata
+                task = loop.run_in_executor(executor, _download_worker, track, output_dir, audio_format, config)
                 task.add_done_callback(lambda _: pbar.update(1))
                 tasks.append(task)
             await asyncio.gather(*tasks)
